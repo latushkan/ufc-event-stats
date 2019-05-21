@@ -1,16 +1,16 @@
-#UFC STATISTICS 
+# UFC STATISTICS 
 
-###Description:
+### Description:
 This program downloads statistics on all UFC fights from 'ufc-stats.com' for statistical analysis.  
 
-###Tools used:
+### Tools used:
 1. **Python** for data wrangling  
 	1. **Requests** for web scraping  
 	2. **Beautiful Soup** for parsing  
 	3. **Pandas** for data frame  
 2. **R** for data visualization and analysis  
 
-###GitHub (starting a new project)
+### GitHub (starting a new project)
  create new repository on GitHub  
 `mkdir <new-repository>` to make local repository  
 `git init` to make GitHub "see" the working directory
