@@ -6,10 +6,11 @@ import requests
 
 start_page = 'http://ufcstats.com/statistics/events/completed?page=all'
 # List of links to each event TEST ONLY ONE
-urls = ['http://ufcstats.com/event-details/6b8f28da9a483049']
+urls = ['http://ufcstats.com/event-details/6b8f28da9a483049',
+        'http://ufcstats.com/event-details/9de7c97e1c0d7927']
 # Scraped is stored stored here before going into data frame
-keys = ['W/L','NAME','STR','TD','SUB','PASS','WEIGHTCLASS','METHOD','TECHNIQUE',
-        'ROUND','TIME']
+keys = ['DATE','W/L','NAME','STR','TD','SUB','PASS','WEIGHTCLASS','METHOD',
+        'TECHNIQUE','ROUND','TIME','LOCATION','ATTENDANCE','EVENT']
 stats = []
 
 # Scrapes all event links from start_page into list "url"
@@ -31,9 +32,20 @@ def getFightStats(url):
     r = requests.get(url)
     soup = BeautifulSoup(r.content, 'lxml')
     rows = soup.find("tbody").findAll("tr")
+    event_details = soup.findAll("li", "b-list__box-list-item")
+    # Deletes tag that includes "Title:" from event_details
+    for event in event_details:
+        event.i.decompose()
+
+    # For each fight, get info on both fighters and saves to dictionary "stats"
     for row in rows:
         w = dict()
         l = dict()
+        # Fight metadata
+        w['EVENT'] = soup.find("h2").text.strip()
+        w['DATE'] = event_details[0].text.strip()
+        w['LOCATION'] = event_details[1].text.strip()
+        w['ATTENDANCE'] = event_details[2].text.strip()
         # Winner stats
         w['W/L'] = "W"
         w['NAME'] = row.findAll("td")[1].findAll("a")[0].text.strip()
@@ -48,6 +60,10 @@ def getFightStats(url):
         w['TIME'] = row.findAll("td")[9].find("p").text.strip()
         stats.append(w)
         # Loser stats
+        l['EVENT'] = soup.find("h2").text.strip()
+        l['DATE'] = event_details[0].text.strip()
+        l['LOCATION'] = event_details[1].text.strip()
+        l['ATTENDANCE'] = event_details[2].text.strip()
         l['W/L'] = "L"
         l['NAME'] = row.findAll("td")[1].findAll("a")[1].text.strip()
         l['STR'] = row.findAll("td")[2].findAll("p")[1].text.strip()
@@ -62,10 +78,12 @@ def getFightStats(url):
         stats.append(l)
 
 def main():
+    #getLinks(start_page)
     for url in urls:
         getFightStats(url)
     # Append to dataframe
     df = pd.DataFrame(data = stats, columns = keys)
+
     print(df)
 
 
