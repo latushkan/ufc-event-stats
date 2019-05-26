@@ -3,11 +3,13 @@ import lxml
 import pandas as pd
 import re
 import requests
+from time import sleep
+from copy import deepcopy
+from tqdm import tqdm
 
 start_page = 'http://ufcstats.com/statistics/events/completed?page=all'
 # List of links to each event TEST ONLY ONE
-urls = ['http://ufcstats.com/event-details/6b8f28da9a483049',
-        'http://ufcstats.com/event-details/9de7c97e1c0d7927']
+urls = []
 # Scraped is stored stored here before going into data frame
 keys = ['DATE','W/L','NAME','STR','TD','SUB','PASS','WEIGHTCLASS','METHOD',
         'TECHNIQUE','ROUND','TIME','LOCATION','ATTENDANCE','EVENT']
@@ -78,12 +80,12 @@ def getFightStats(url):
         stats.append(l)
 
 def main():
-    #getLinks(start_page)
-    for url in urls:
+    getLinks(start_page)
+    for url in tqdm(urls[0:5]):
         getFightStats(url)
+        sleep(10)
     # Append to dataframe
     df = pd.DataFrame(data = stats, columns = keys)
-
     print(df)
 
 
