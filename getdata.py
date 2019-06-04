@@ -1,55 +1,57 @@
 from bs4 import BeautifulSoup
+from copy import deepcopy
+import json
 import lxml
 import pandas as pd
 import re
 import requests
 from time import sleep
-from copy import deepcopy
 from tqdm import tqdm
 
+# List of all completed events
 start_page = 'http://ufcstats.com/statistics/events/completed?page=all'
-# List of links to each event TEST ONLY ONE
+# Links of each individual event obtained from start_page
 urls = []
-# Scraped is stored stored here before going into data frame
-keys = ['DATE','W/L','NAME','STR','TD','SUB','PASS','WEIGHTCLASS','METHOD',
-        'TECHNIQUE','ROUND','TIME','LOCATION','ATTENDANCE','EVENT']
-stats = []
+# Data from each individual event is stored here as a dictionary
+data = []
 
-# Scrapes all event links from start_page into list "url"
+# Scrapes each event link from the start_page
 def getLinks(url):
     r = requests.get(url)
-    # Downloads entire HTML file.
+    # Downloads HTML file
     soup = BeautifulSoup(r.content, 'lxml')
-    # Cuts out everything but the table.
+    # Focus is on the table
     table = soup.findAll('table')[0]
-    # Iterates through the table and appends all links to a list.
+    # Iterates through the table and appends all links to a list
     for link in table.findAll('a', attrs={'href': re.compile("^http://")}):
         urls.append(link.get('href'))
     # The first link in the table is for an event that hasn't happened yet.
     # Delete this item from our list.
     urls.pop(0)
 
-# Opens an event link and scrapes each fight into dictionary "stats"
+# Opens an event link and scrapes each fight into dictionary "data"
 def getFightStats(url):
     r = requests.get(url)
     soup = BeautifulSoup(r.content, 'lxml')
+    # Focus on each row of the table, one fight, two fighters
     rows = soup.find("tbody").findAll("tr")
+    # Focus on event metadata
     event_details = soup.findAll("li", "b-list__box-list-item")
-    # Deletes tag that includes "Title:" from event_details
+    # Deletes tag that includes "Title:" from event metadata
     for event in event_details:
         event.i.decompose()
 
-    # For each fight, get info on both fighters and saves to dictionary "stats"
+    # For each fight, gets data on both fighters and saves to dictionary "data"
     for row in rows:
         w = dict()
         l = dict()
         # Fight metadata
-        w['EVENT'] = soup.find("h2").text.strip()
-        w['DATE'] = event_details[0].text.strip()
-        w['LOCATION'] = event_details[1].text.strip()
-        w['ATTENDANCE'] = event_details[2].text.strip()
+        w['EVENT'] = l['EVENT'] = soup.find("h2").text.strip()
+        w['DATE'] = l['DATE'] = event_details[0].text.strip()
+        w['LOCATION'] = l['LOCATION'] = event_details[1].text.strip()
+        w['ATTENDANCE'] = l['ATTENDANCE'] = event_details[2].text.strip()
         # Winner stats
-        w['W/L'] = "W"
+        w['WL'] = "W"
         w['NAME'] = row.findAll("td")[1].findAll("a")[0].text.strip()
         w['STR'] = row.findAll("td")[2].findAll("p")[0].text.strip()
         w['TD'] = row.findAll("td")[3].findAll("p")[0].text.strip()
@@ -60,13 +62,9 @@ def getFightStats(url):
         w['TECHNIQUE'] = row.findAll("td")[7].findAll("p")[1].text.strip()
         w['ROUND'] = row.findAll("td")[8].find("p").text.strip()
         w['TIME'] = row.findAll("td")[9].find("p").text.strip()
-        stats.append(w)
+        data.append(w)
         # Loser stats
-        l['EVENT'] = soup.find("h2").text.strip()
-        l['DATE'] = event_details[0].text.strip()
-        l['LOCATION'] = event_details[1].text.strip()
-        l['ATTENDANCE'] = event_details[2].text.strip()
-        l['W/L'] = "L"
+        l['WL'] = "L"
         l['NAME'] = row.findAll("td")[1].findAll("a")[1].text.strip()
         l['STR'] = row.findAll("td")[2].findAll("p")[1].text.strip()
         l['TD'] = row.findAll("td")[3].findAll("p")[1].text.strip()
@@ -77,17 +75,19 @@ def getFightStats(url):
         l['TECHNIQUE'] = row.findAll("td")[7].findAll("p")[1].text.strip()
         l['ROUND'] = row.findAll("td")[8].find("p").text.strip()
         l['TIME'] = row.findAll("td")[9].find("p").text.strip()
-        stats.append(l)
+        data.append(l)
 
 def main():
     getLinks(start_page)
-    for url in tqdm(urls[0:5]):
+    # Iterate though each event and get data
+    # Sleep f(x) prevents accidental DoS attack
+    for url in tqdm(urls):
         getFightStats(url)
         sleep(10)
-    # Append to dataframe
-    df = pd.DataFrame(data = stats, columns = keys)
-    print(df)
 
+    # Store data as JSON
+    with open('eventstats.json', 'w') as f:
+        json.dump(data, f)
 
 if __name__ == "__main__":
     main()
